@@ -17,9 +17,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { initializeLocalStorage } from './utils/localStorage';
 import AdmissionHelpPage from './pages/AdmissionHelpPage';
 import AdminAdmissionHelpRequestsPage from './pages/AdminAdmissionHelpRequestsPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ProfilePage from './pages/ProfilePage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode, requireAdmin?: boolean }> = ({ 
@@ -64,7 +63,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/admission/management" element={<ProtectedRoute requireAdmin><AdminManagementEditPage /></ProtectedRoute>} />
       <Route path="/admission/:type/help" element={<AdmissionHelpPage />} />
       <Route path="/admin/admission/:type/help-requests" element={<ProtectedRoute requireAdmin><AdminAdmissionHelpRequestsPage /></ProtectedRoute>} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/forgot-password" element={<AuthCallbackPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/auth/verify" element={<AuthCallbackPage />} />
