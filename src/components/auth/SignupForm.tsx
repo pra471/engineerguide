@@ -33,10 +33,11 @@ const SignupForm: React.FC = () => {
     try {
       const user = await signup(email, password);
       if (user) {
+        // Optionally, send email verification here with Firebase
         navigate('/login');
       }
-    } catch (err) {
-      setFormError('An error occurred during signup');
+    } catch (err: any) {
+      setFormError(err.message || 'An error occurred during signup');
     } finally {
       setIsLoading(false);
     }

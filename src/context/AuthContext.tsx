@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
-import { supabase } from '../utils/supabaseClient';
+import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { auth } from '../utils/firebaseConfig';
 
 interface AuthContextType {
-  user: User | null;
-  login: (username: string, password: string) => Promise<User | null>;
-  signup: (email: string, password: string) => Promise<any>;
+  user: FirebaseUser | null;
+  login: (email: string, password: string) => Promise<FirebaseUser | null>;
+  signup: (email: string, password: string) => Promise<FirebaseUser | null>;
   resetPassword: (email: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
@@ -19,62 +19,42 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const session = supabase.auth.getSession();
-    if (session) {
-      setUser(session.user);
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const login = async (identifier: string, password: string): Promise<User | null> => {
+  const login = async (email: string, password: string): Promise<FirebaseUser | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: identifier.includes('@') ? identifier : undefined,
-        password,
-        ...(identifier.includes('@') ? {} : { email: undefined, password: undefined })
-      });
-      if (signInError) {
-        setError(signInError.message);
-        return null;
-      }
-      if (data.user) {
-        setUser(data.user as any);
-        return data.user as any;
-      } else {
-        setError('Invalid email or password');
-        return null;
-      }
-    } catch (error) {
-      setError('An error occurred during login');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      return userCredential.user;
+    } catch (err: any) {
+      setError(err.message);
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string): Promise<any> => {
+  const signup = async (email: string, password: string): Promise<FirebaseUser | null> => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      if (signUpError) {
-        setError(signUpError.message);
-        return null;
-      }
-      return data.user;
-    } catch (error) {
-      setError('An error occurred during signup');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      setUser(userCredential.user);
+      return userCredential.user;
+    } catch (err: any) {
+      setError(err.message);
       return null;
     } finally {
       setIsLoading(false);
@@ -85,14 +65,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
-      if (resetError) {
-        setError(resetError.message);
-        return false;
-      }
+      await sendPasswordResetEmail(auth, email);
       return true;
-    } catch (error) {
-      setError('An error occurred during password reset');
+    } catch (err: any) {
+      setError(err.message);
       return false;
     } finally {
       setIsLoading(false);
@@ -100,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     setUser(null);
   };
 
@@ -113,10 +89,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
   return context;
 };

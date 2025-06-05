@@ -16,6 +16,11 @@ const ForgotPasswordForm: React.FC = () => {
       setFormError('Please enter your email');
       return;
     }
+    // Validate email format
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setFormError('Please enter a valid email address');
+      return;
+    }
     const ok = await resetPassword(email);
     if (ok) setSubmitted(true);
   };

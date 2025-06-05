@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../utils/supabaseClient';
+import { auth } from '../utils/firebaseConfig';
+import { confirmPasswordReset } from 'firebase/auth';
 
 const AuthCallbackPage: React.FC = () => {
   const [mode, setMode] = useState<'processing' | 'reset' | 'done' | 'error'>('processing');
@@ -9,17 +10,18 @@ const AuthCallbackPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const [oobCode, setOobCode] = useState('');
 
   useEffect(() => {
-    // Check for access_token in hash
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const type = params.get('type');
-    if (type === 'recovery' || type === 'invite') {
+    // Firebase sends oobCode in query string for password reset
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+    const oob = params.get('oobCode');
+    if (modeParam === 'resetPassword' && oob) {
+      setOobCode(oob);
       setMode('reset');
     } else {
       setMode('processing');
-      // Optionally, handle email verification or other flows
       setTimeout(() => setMode('done'), 2000);
     }
   }, []);
@@ -35,13 +37,12 @@ const AuthCallbackPage: React.FC = () => {
       setError('Passwords do not match.');
       return;
     }
-    // Use Supabase to update password
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      setError(updateError.message);
-    } else {
+    try {
+      await confirmPasswordReset(auth, oobCode, password);
       setSuccess('Password updated! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 

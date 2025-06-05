@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AtSign, Lock, AlertCircle } from 'lucide-react';
+import { Lock, AlertCircle } from 'lucide-react';
 import Button from '../common/Button';
 import { motion } from 'framer-motion';
 
 const LoginForm: React.FC = () => {
-  const [identifier, setIdentifier] = useState(''); // email or username
+  const [identifier, setIdentifier] = useState(''); // email
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState('');
   const { login, error, isLoading } = useAuth();
@@ -17,6 +17,11 @@ const LoginForm: React.FC = () => {
     setFormError('');
     if (!identifier.trim() || !password.trim()) {
       setFormError('Please enter your email and password');
+      return;
+    }
+    // Only allow email for Firebase
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identifier)) {
+      setFormError('Please enter a valid email address');
       return;
     }
     const user = await login(identifier, password);
@@ -40,11 +45,11 @@ const LoginForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">
-            Email or Username
+            Email
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <AtSign className="h-5 w-5 text-gray-400" />
+              <Lock className="h-5 w-5 text-gray-400" />
             </div>
             <input
               id="identifier"
@@ -52,7 +57,7 @@ const LoginForm: React.FC = () => {
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="pl-10 w-full py-2 px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your email or username"
+              placeholder="Enter your email"
               autoComplete="username"
             />
           </div>
@@ -100,8 +105,8 @@ const LoginForm: React.FC = () => {
       
       <div className="mt-6 text-center text-sm text-gray-600">
         <p>Demo accounts:</p>
-        <p className="mt-1">Admin: username: <span className="font-medium">admin</span>, password: <span className="font-medium">admin123</span></p>
-        <p>User: username: <span className="font-medium">user</span>, password: <span className="font-medium">user123</span></p>
+        <p className="mt-1">Admin: email: <span className="font-medium">admin@example.com</span>, password: <span className="font-medium">admin123</span></p>
+        <p>User: email: <span className="font-medium">user@example.com</span>, password: <span className="font-medium">user123</span></p>
       </div>
     </motion.div>
   );
