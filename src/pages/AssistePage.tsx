@@ -2,34 +2,33 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/common/Layout';
 import Button from '../components/common/Button';
 import { X } from 'lucide-react';
+import { collection, updateDoc, doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../utils/firebaseConfig';
 
 const AssistePage: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [responses, setResponses] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
-    const helpRequests = JSON.parse(localStorage.getItem('helpRequests') || '[]');
-    setRequests(helpRequests);
-    // Listen for updates to helpRequests in localStorage (for real-time updates)
-    const onStorage = () => {
-      const updated = JSON.parse(localStorage.getItem('helpRequests') || '[]');
-      setRequests(updated);
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // Listen to Firestore for real-time updates
+    const unsub = onSnapshot(collection(db, 'helpRequests'), (snapshot) => {
+      setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
   }, []);
 
-  const handleResponse = (id: string) => {
-    const updatedRequests = requests.map(req =>
-      req.id === id ? { ...req, status: 'responded', response: responses[id] } : req
-    );
-    setRequests(updatedRequests);
-    localStorage.setItem('helpRequests', JSON.stringify(updatedRequests));
+  const handleResponse = async (id: string) => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    await updateDoc(doc(db, 'helpRequests', id), {
+      status: 'responded',
+      response: responses[id]
+    });
   };
 
   const handleCloseRequest = (id: string) => {
     setRequests(requests.filter(req => req.id !== id));
-    // Do not update localStorage, so the removal is only temporary for this session
+    // Do not update Firestore, so the removal is only temporary for this session
   };
 
   return (
